@@ -9,7 +9,7 @@ import errno
 import copy
 
 parser = configparser.ConfigParser()
-parser.read('config.ini')
+parser.read('/config.ini')
 config_dict = {}
 
 for element in parser.sections():
@@ -33,8 +33,11 @@ for element in parser.sections():
 
             rootWeb = lxml.etree.parse("last.xml")
             a = value.split("/")
-
-            filename = "Indice/"+element+"/"+name+"/"+a[2]+".xml"
+            
+            if element=="LA_VOZ":
+                filename = "Indice/"+element+"/"+name+"/"+a[2]
+            else:        
+                filename = "Indice/"+element+"/"+name+"/"+a[2]+".xml"
             if not os.path.exists(os.path.dirname(filename)):
                 try:
                     os.makedirs(os.path.dirname(filename))
@@ -51,7 +54,11 @@ for element in parser.sections():
                     pubDate = item.find(".//pubDate").text   
                     root = lxml.etree.parse(filename)
                     pathTitle = ".//item[title='"+title+"']/title"
-                    estaTitulo = root.find(pathTitle)
+                    print(pathTitle)
+                    try:
+                        estaTitulo = root.find(pathTitle)
+                    except:
+                        pass    
                     pathPublished = ".//item[pubDate='"+pubDate+"']/title"
                     estaPublicado = root.find(pathPublished)
                     if (estaTitulo == None) and (estaPublicado == None):
@@ -61,8 +68,6 @@ for element in parser.sections():
                         root.getroot().insert(0,item)
                         lxml.etree.dump(root.getroot())
                 f = open(filename, 'w')
-                print(lxml.etree.tostring(root))
-                print(lxml.etree.tostring(rootWeb))
                 f.write(lxml.etree.tostring(root.getroot(), pretty_print=True).decode("utf-8"))
                 f.close()
 ##                    article_title = entry.title
