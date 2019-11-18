@@ -105,16 +105,3 @@ class Main:
         return True
 
     
-main = Main()
-
-main.descargar_noticias()
-
-start = time.time()
-print("En 10 minutos se ejecutara nuevamente")                                                                                                                                                                                                                                                                                                                                                                                                
-while True:
-    final = time.time()   
-    if(final-start >600):
-        
-        main.descargar_noticias()
-        print("En 10 minutos se ejecutara nuevamente")
-        start=time.time()

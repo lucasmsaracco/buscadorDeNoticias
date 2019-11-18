@@ -1,4 +1,6 @@
 import array
+import sys
+
 class UncompressedPostings:
     
     @staticmethod
@@ -36,3 +38,4 @@ class UncompressedPostings:
         decoded_postings_list = array.array('L')
         decoded_postings_list.frombytes(encoded_postings_list)
         return decoded_postings_list.tolist()
+        
