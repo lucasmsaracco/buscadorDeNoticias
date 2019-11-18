@@ -73,6 +73,7 @@ class Menu:
                             print("No se encuentra ningun diccionario en memoria para guardar, aprete ENTER para volver")
                         else:    
                             bsbi.guardarIndiceInvertido(lista)
+                            lista = []
                             print("Indice guardado, aprete ENTER para avanzar")
                         key2 = None
                         while key2 != b'\r':
@@ -81,10 +82,7 @@ class Menu:
                             pass
                     elif ans2 == b"3":
                         try:
-                            listaDeDiccionarios = bsbi.recuperarIndice()
-                            for diccionario in listaDeDiccionarios:
-                                for termid in diccionario:
-                                    index[termid] = diccionario[termid]
+                            index = bsbi.recuperarIndice()
                             index2 = bsbi.recuperarListaDeIndiceDocID()
                             index3 = bsbi.recuperarListaDeIndiceTermID()
                             print("Indice cargado, aprete ENTER para avanzar")
@@ -114,10 +112,12 @@ class Menu:
             if key == b'\x1b':
                 pass
             else:
+                os.system('cls')
                 palabra = input("Ingrese una palabra:")
+                os.system("cls")
                 bsbi.encontrarNoticiasdePalabra(palabra, index)
            
-                print("Aprete enter para salir")
+                print("\nAprete enter para salir")
                 key2=None
                 while key2 != b"\r":
                     key2 = msvcrt.getch()

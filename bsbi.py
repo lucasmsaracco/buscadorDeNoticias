@@ -10,7 +10,7 @@ import collections
 from UncompressedPostings import UncompressedPostings
 import array
 import sys
-
+from termcolor import colored
 
 ig = configparser.ConfigParser()
 archivo = ig.read("config.ini")
@@ -142,7 +142,7 @@ def guardarListaDeIndiceDocID(listaDeIndiceDocID):
 def guardarIndiceInvertido(diccionarioAGuardar):
     for i in range(0,len(diarios)):
         with open("out/"+diarios[i]+"/"+"diccionario_"+diarios[i]+".pickle","wb") as handle:
-            pickle.dump(diccionarioAGuardar[i], handle, protocol=pickle.HIGHEST_PROTOCOL)        
+            pickle.dump(encodearDocs(diccionarioAGuardar[i]), handle, protocol=pickle.HIGHEST_PROTOCOL)        
 
 # GUARDA DICCIONARIOS DOC->STRING CON PICKLE
 def guardarListaDeIndiceDoc(listaDeIndiceDocID):
@@ -152,10 +152,14 @@ def guardarListaDeIndiceDoc(listaDeIndiceDocID):
 # RECUPERA DICICONARIO CON PICKLE
 def recuperarIndice():
     b=[]
+    index = {}
     for i in range(0, len(diarios)):
         with open("out/"+diarios[i]+"/"+"diccionario_"+diarios[i]+".pickle", 'rb') as handle:
-            b.append(pickle.load(handle))
-    return b
+            b.append(decodearDocs(pickle.load(handle)))   
+    for diccionario in b:
+        for termid in diccionario:
+            index[termid] = diccionario[termid]
+    return index        
 
 # RECUPERA DICICONARIO DOCID->DOC CON PICKLE
 def recuperarListaDeIndiceDocID():
@@ -267,25 +271,36 @@ def encontrarNoticiasdePalabra(palabras, diccionarioMergeado):
         print("No hay diccionario en memoria")
     else:    
         for palabra in palabrasSeparadas:
+            
             listaDeNoticiasID = []
             listaDeNoticias = []
             listaDeDiccionarioDocID = recuperarListaDeIndiceDocID()
             listaDeDiccionarioTermID = recuperarListaDeIndiceTermID()
             listaDeDiccionarioDoc = recuperarListaDeIndiceDoc()
-            palabraStemmeada = stemmer.stem(stemmer.stem(palabra.lower()))
+            palabraStemmeada = stemmer.stem(palabra.lower())
             for numeroTermID,termino in listaDeDiccionarioTermID.items():
-                if termino == palabraStemmeada:
+                if termino == palabraStemmeada:         
                     if numeroTermID in diccionarioMergeado:
                         listaDeNoticiasID.append(diccionarioMergeado[numeroTermID])
+            if len(listaDeNoticiasID) == 0:
+                print(colored("\n---------------------La palabra '"+palabra+"' no se encuentra en ninguna noticia---------------------", 'red'))
+            else:
+                print(colored("\n ---------------------  Las noticias relacionadas con '"+palabra+"' son:  ---------------------",'green'))
             for arrayNoticiaID in listaDeNoticiasID:
                 for noticiaID in arrayNoticiaID:
                     for numeroDocID,noticia in listaDeDiccionarioDocID.items():
                         if noticiaID == numeroDocID:
                             for doc in listaDeDiccionarioDoc:
+                                
                                 if listaDeDiccionarioDoc[doc] == noticia:
                                     listaDeNoticias.append(doc)
-            listaDeNoticias = list(set(listaDeNoticias))
-            if len(listaDeNoticias) == 0:
-                print("La palabra no se encuentra en ninguna noticia")
-            else:
-                print("LAS NOTICIAS RELACIONADAS A '"+palabra.capitalize()+"' SON:\n", listaDeNoticias)        
+                                    print("\n",doc)
+
+def obtener_docs_ids_con_tupla(tupla):
+
+    lista = []
+
+    for x in range(1,tupla[1]+1):
+        lista.append(int_array[tupla[0]+x])
+
+     return lista
