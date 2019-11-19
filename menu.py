@@ -1,13 +1,13 @@
 import msvcrt
 import os
-from main import Main
+from recolector import Recolector
 from bsbi import FuncionesBSBI
 from termcolor import colored
 
 class Menu:
 
     def __init__(self):
-        self.main = Main()
+        self.recolector = Recolector()
         self.bsbi = FuncionesBSBI()
         self.ans=True
         self.index = {}
@@ -21,10 +21,9 @@ class Menu:
             print ("""
             1.Recolectar noticias
             2.Crear indice invertido
-            3.Comprimir lista de apariciones
+            3.Mostar el indice invertido en memoria
             4.Realizar busquedas
-            5.Mostar el indice invertido en memoria
-            6.Salir del programa
+            5.Salir del programa
             """)
 
             print(colored("Ingrese la opcion deseada:", "blue"))
@@ -40,7 +39,7 @@ class Menu:
                     pass
                 else:
                     os.system("cls")
-                    self.main.descargarNoticias()
+                    self.recolector.descargarNoticias()
 
             elif self.ans==b"2":
                 os.system('cls')
@@ -106,13 +105,6 @@ class Menu:
                         elif self.ans2 == b"4":
                             break            
                     os.system("cls")
-            elif self.ans==b"3":
-                print("\n WORK IN PROGRESS, apreta ENTER para volver")
-                self.key = None
-                while self.key != b'\r':
-                    self.key = msvcrt.getch()
-                if self.key == b'\r':
-                    pass 
             elif self.ans==b"4":
                 os.system('cls')
                 print("Si desea volver atras presione la tecla Esc, si esta seguro de querer acceder al menu de BUSCAR PALABRA presione ENTER")
@@ -132,7 +124,7 @@ class Menu:
                         self.key2 = msvcrt.getch()
                     if self.key2 == b'\r':
                         pass
-            elif self.ans == b"5":
+            elif self.ans == b"3":
                 os.system("cls")
                 if len(self.index) == 0:
                     print(colored("No se encuentra ningun diccionario en memoria, aprete ENTER para volver", "red"))
@@ -143,7 +135,7 @@ class Menu:
                     self.key = msvcrt.getch()
                 if self.key == b'\r':
                     pass          
-            elif self.ans == b"6":
+            elif self.ans == b"5":
                 self.ans == False
 x = Menu()
 x.ejecutarMenu()
