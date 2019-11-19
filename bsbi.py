@@ -12,295 +12,342 @@ import array
 import sys
 from termcolor import colored
 
-ig = configparser.ConfigParser()
-archivo = ig.read("config.ini")
-diarios = ig.sections()
-stemmer = SnowballStemmer("spanish")
-descripcion = []
-ultimoDocID = 0
-ultimoTermID = 0
-
-# GENERA DICCIONARIO DOCID->DOC A PARTIR DE DICCIONARIO DE DOC->STRING(TERMINOS)
-def construirDocID(diccionarioDeDocs):
-    diccionarioTemporal={}
-    global ultimoDocID
-    x=0
-    values = list(diccionarioDeDocs.values()) 
-    for i in range(1 + ultimoDocID,len(diccionarioDeDocs.keys())+ultimoDocID+1):
-        diccionarioTemporal[i]=values[x]
-        x=x+1
-    ultimoDocID=ultimoDocID+len(diccionarioDeDocs.keys())
-    return diccionarioTemporal
 
 
-# GENERA DICCIONARIO TERMID->TERM A PARTIR DE LISTA DE PALABRAS STEMMEADAS
-def construirTermID(palabras_stemmeadas):
-    diccionarioTemporal={}
-    global ultimoTermID
-    x=0
-    for i in range(1 + ultimoTermID,len(palabras_stemmeadas)+ultimoTermID+1):
-        if palabras_stemmeadas[x] in list(diccionarioTemporal.values()):
-            pass
-        else:
-            diccionarioTemporal[i]=palabras_stemmeadas[x]
-        x=x+1
-    ultimoTermID=ultimoTermID+len(palabras_stemmeadas)
-    return diccionarioTemporal    
+class FuncionesBSBI:
 
 
-# DEVUELVE DICCIONARIO DE DOCUMENTO -> STRING(TERMINOS)
-def parsear_bloque(num):
-    
-    diccionarioDeDocs={}
-    for seccion in ig[diarios[num]]:
-        if seccion != "query_interval" and seccion != "tmp" and seccion != "output" and seccion != "url_base":
-            tree = ET.parse('out/'+diarios[num]+'/'+seccion+'/'+seccion+'.xml')
-            root = tree.getroot()
-            for item in root.findall("item"):
-                descripcionTemporal=item.find('description')
-                if descripcionTemporal != None:
-                    if descripcionTemporal.text != None:
-                        if item.find("title").text+ " " +item.find("description").text in diccionarioDeDocs.values():
-                            pass
-                        else:
-                            diccionarioDeDocs[diarios[num]+"-"+seccion+"-"+item.find("title").text+item.find("pubDate").text]=item.find("title").text+ " " +item.find("description").text
-    return(diccionarioDeDocs)
+    def __init__(self):
 
-# DEVUELVE LISTA DE PALABRAS STEMMEADAS EN EL DICCIONARIO DOCUMENTO -> STRING(TERMINOS)
-def stemmear(diccionarioDeID):
-    palabras_minuscula = []
-    palabras_stemmeadas = []
-    for key in diccionarioDeID:
-        palabras = re.findall(r"[A-z]+[áéíóú]?[A-z]*", diccionarioDeID[key].lower())
-    
-        for palabra in palabras:
-            palabras_minuscula.append(palabra)
-    filtered_words = [word for word in palabras_minuscula if word not in stopwords.words('spanish') and not len(word) < 4]
-    
-    for word in filtered_words:
-        if stemmer.stem(word) in palabras_stemmeadas:
-           pass
-        else:
-            palabras_stemmeadas.append(stemmer.stem(word))  
-    return(palabras_stemmeadas)
+        self.ig = configparser.ConfigParser()
+        self.archivo = self.ig.read("config.ini")
+        self.diarios = self.ig.sections()
+        self.stemmer = SnowballStemmer("spanish")
+        self.descripcion = []
+        self.ultimoDocID = 0
+        self.ultimoTermID = 0
+
+    # GENERA DICCIONARIO DOCID->DOC A PARTIR DE DICCIONARIO DE DOC->STRING(TERMINOS)
+    def construirDocID(self,diccionarioDeDocs):
+        diccionarioTemporal={}
+        self.ultimoDocID
+        self.x=0
+        values = list(diccionarioDeDocs.values()) 
+        for i in range(1 + self.ultimoDocID,len(diccionarioDeDocs.keys())+self.ultimoDocID+1):
+            diccionarioTemporal[i]=values[self.x]
+            self.x=self.x+1
+        self.ultimoDocID=self.ultimoDocID+len(diccionarioDeDocs.keys())
+        return diccionarioTemporal
 
 
-#GENERA DICCIONARIO TERMID->DOCID
-def invertirDiccionario(diccionarioDeTermID, diccionarioDeDocID):
+    # GENERA DICCIONARIO TERMID->TERM A PARTIR DE LISTA DE PALABRAS STEMMEADAS
+    def construirTermID(self,palabras_stemmeadas):
+        diccionarioTemporal={}
+        self.ultimoTermID
+        self.x=0
+        for i in range(1 + self.ultimoTermID,len(palabras_stemmeadas)+self.ultimoTermID+1):
+            if palabras_stemmeadas[self.x] in list(diccionarioTemporal.values()):
+                pass
+            else:
+                diccionarioTemporal[i]=palabras_stemmeadas[self.x]
+            self.x=self.x+1
+        self.ultimoTermID=self.ultimoTermID+len(palabras_stemmeadas)
+        return diccionarioTemporal    
 
-    dicInv={}
-    for key in diccionarioDeDocID:
-        texto = stemmer.stem(diccionarioDeDocID[key].replace('"',"").lower())
-        for numeroPalabra in diccionarioDeTermID:
-            if diccionarioDeTermID[numeroPalabra] in texto:
-                if numeroPalabra not in dicInv.keys():
-                    dicInv[numeroPalabra]=[key]
-                else:
-                    dicInv[numeroPalabra].append(key)
-    return(dicInv)
 
-#MERGEA DICICONARIO TERMID->DOCID
-
-def mergearListaDeDiccionarios(diccionarioCompleto, dicTermID):
-    diccionarioDePrueba = {}
-    diccionarioNuevo = {}
-    for key,value in dicTermID.items():
-        if value not in diccionarioDePrueba:
-            diccionarioDePrueba[value] = [key]
-        else:
-            diccionarioDePrueba[value].append(key)
-    for key in diccionarioDePrueba:
-        suma = []
-        if len(diccionarioDePrueba[key]) > 1:
-            for position in diccionarioDePrueba[key]:
-                if position in diccionarioCompleto.keys():
-                    suma = suma + diccionarioCompleto[position]
-            if len(suma)!=0:        
-                diccionarioNuevo[diccionarioDePrueba[key][0]] = suma
-        else:
-            if diccionarioDePrueba[key][0] in diccionarioCompleto.keys():
-                diccionarioNuevo[diccionarioDePrueba[key][0]]= diccionarioCompleto[diccionarioDePrueba[key][0]]                
-    return(diccionarioNuevo)    
-
-  
-
+    # DEVUELVE DICCIONARIO DE DOCUMENTO -> STRING(TERMINOS)
+    def parsear_bloque(self,num):
         
+        self.diccionarioDeDocs={}
+        for seccion in self.ig[self.diarios[num]]:
+            if seccion != "query_interval" and seccion != "tmp" and seccion != "output" and seccion != "url_base":
+                self.tree = ET.parse('out/'+self.diarios[num]+'/'+seccion+'/'+seccion+'.xml')
+                self.root = self.tree.getroot()
+                for item in self.root.findall("item"):
+                    self.descripcionTemporal=item.find('description')
+                    if self.descripcionTemporal != None:
+                        if self.descripcionTemporal.text != None:
+                            if item.find("title").text+ " " +item.find("description").text in self.diccionarioDeDocs.values():
+                                pass
+                            else:
+                                self.diccionarioDeDocs[self.diarios[num]+"-"+seccion+"-"+item.find("title").text+"-"+item.find("pubDate").text]=item.find("title").text+ " " +item.find("description").text
+        return(self.diccionarioDeDocs)
+
+    # DEVUELVE LISTA DE PALABRAS STEMMEADAS EN EL DICCIONARIO DOCUMENTO -> STRING(TERMINOS)
+    def stemmear(self,diccionarioDeID):
+        self.palabras_minuscula = []
+        self.palabras_stemmeadas = []
+        for key in diccionarioDeID:
+            self.palabras = re.findall(r"[A-z]+[áéíóú]?[A-z]*", diccionarioDeID[key].lower())
+        
+            for palabra in self.palabras:
+                self.palabras_minuscula.append(palabra)
+        self.filtered_words = [word for word in self.palabras_minuscula if word not in stopwords.words('spanish') and not len(word) < 4]
+        
+        for word in self.filtered_words:
+            if self.stemmer.stem(word) in self.palabras_stemmeadas:
+                pass
+            else:
+                self.palabras_stemmeadas.append(self.stemmer.stem(word))  
+        return(self.palabras_stemmeadas)
 
 
-# GUARDA DICCIONARIOS TERMID->TERM CON PICKLE
-def guardarListaDeIndiceTermID(listaDeIndiceTermID):
-    with open("out/diccionario_termid-term.pickle","wb") as handle:
-        pickle.dump(listaDeIndiceTermID, handle, protocol=pickle.HIGHEST_PROTOCOL)    
+    #GENERA DICCIONARIO TERMID->DOCID
+    def invertirDiccionario(self, diccionarioDeTermID, diccionarioDeDocID):
+
+        self.dicInv={}
+        for key in diccionarioDeDocID:
+            self.texto = self.stemmer.stem(diccionarioDeDocID[key].replace('"',"").lower())
+            for numeroPalabra in diccionarioDeTermID:
+                if diccionarioDeTermID[numeroPalabra] in self.texto:
+                    if numeroPalabra not in self.dicInv.keys():
+                        self.dicInv[numeroPalabra]=[key]
+                    else:
+                        self.dicInv[numeroPalabra].append(key)
+        return(self.dicInv)
+
+    #MERGEA DICICONARIO TERMID->DOCID
+
+    def mergearListaDeDiccionarios(self,diccionarioCompleto, dicTermID):
+        self.diccionarioDePrueba = {}
+        self.diccionarioNuevo = {}
+        for key,value in dicTermID.items():
+            if value not in self.diccionarioDePrueba:
+                self.diccionarioDePrueba[value] = [key]
+            else:
+                self.diccionarioDePrueba[value].append(key)
+        for key in self.diccionarioDePrueba:
+            self.suma = []
+            if len(self.diccionarioDePrueba[key]) > 1:
+                for position in self.diccionarioDePrueba[key]:
+                    if position in diccionarioCompleto.keys():
+                        self.suma = self.suma + diccionarioCompleto[position]
+                if len(self.suma)!=0:        
+                    self.diccionarioNuevo[self.diccionarioDePrueba[key][0]] = self.suma
+            else:
+                if self.diccionarioDePrueba[key][0] in diccionarioCompleto.keys():
+                    self.diccionarioNuevo[self.diccionarioDePrueba[key][0]]= diccionarioCompleto[self.diccionarioDePrueba[key][0]]                
+        return(self.diccionarioNuevo)    
+
+    
+
+            
 
 
-# GUARDA DICCIONARIOS DOCID->STRING CON PICKLE
-def guardarListaDeIndiceDocID(listaDeIndiceDocID):
-    with open("out/diccionario_docid-doc.pickle","wb") as handle:
-        pickle.dump(listaDeIndiceDocID, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    # GUARDA DICCIONARIOS TERMID->TERM CON PICKLE
+    def guardarListaDeIndiceTermID(self,listaDeIndiceTermID):
+        with open("out/diccionario_termid-term.pickle","wb") as handle:
+            pickle.dump(listaDeIndiceTermID, handle, protocol=pickle.HIGHEST_PROTOCOL)    
 
-# GUARDA INDICE INVERTIDO CON PICKLE
-def guardarIndiceInvertido(diccionarioAGuardar):
-    for i in range(0,len(diarios)):
-        with open("out/"+diarios[i]+"/"+"diccionario_"+diarios[i]+".pickle","wb") as handle:
-            pickle.dump(encodearDocs(diccionarioAGuardar[i]), handle, protocol=pickle.HIGHEST_PROTOCOL)        
 
-# GUARDA DICCIONARIOS DOC->STRING CON PICKLE
-def guardarListaDeIndiceDoc(listaDeIndiceDocID):
-    with open("out/diccionario_doc-terms.pickle","wb") as handle:
-        pickle.dump(listaDeIndiceDocID, handle, protocol=pickle.HIGHEST_PROTOCOL)            
+    # GUARDA DICCIONARIOS DOCID->STRING CON PICKLE
+    def guardarListaDeIndiceDocID(self,listaDeIndiceDocID):
+        with open("out/diccionario_docid-doc.pickle","wb") as handle:
+            pickle.dump(listaDeIndiceDocID, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-# RECUPERA DICICONARIO CON PICKLE
-def recuperarIndice():
-    b=[]
-    index = {}
-    for i in range(0, len(diarios)):
-        with open("out/"+diarios[i]+"/"+"diccionario_"+diarios[i]+".pickle", 'rb') as handle:
-            b.append(decodearDocs(pickle.load(handle)))   
-    for diccionario in b:
-        for termid in diccionario:
-            index[termid] = diccionario[termid]
-    return index        
+    # GUARDA INDICE INVERTIDO CON PICKLE
+    def guardarIndiceInvertido(self,diccionarioAGuardar):
+        for i in range(0,len(self.diarios)):
+            with open("out/"+self.diarios[i]+"/"+"diccionario_"+self.diarios[i]+".pickle","wb") as handle:
+                pickle.dump(self.encodearDocs(diccionarioAGuardar[i]), handle, protocol=pickle.HIGHEST_PROTOCOL)        
 
-# RECUPERA DICICONARIO DOCID->DOC CON PICKLE
-def recuperarListaDeIndiceDocID():
+    # GUARDA DICCIONARIOS DOC->STRING CON PICKLE
+    def guardarListaDeIndiceDoc(self,listaDeIndiceDocID):
+        with open("out/diccionario_doc-terms.pickle","wb") as handle:
+            pickle.dump(listaDeIndiceDocID, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    # GUARDA LISTA DE INTARRAY
+    def guardarIntArray(self, listaIntArray):
+        with open("out/intArray.pickle","wb") as handle:
+            pickle.dump(listaIntArray, handle, protocol=pickle.HIGHEST_PROTOCOL)                    
+
+    # RECUPERA DICICONARIO TERMID->DOCID CON PICKLE, LO MERGEA, Y LO TRANSFORMA A TERMID->TUPLA PARA USARLO EN MEMORIA
+    def recuperarIndice(self):
+        self.b=[]
+        self.temp = {}
+        self.index = {}
+        for i in range(0, len(self.diarios)):
+            with open("out/"+self.diarios[i]+"/"+"diccionario_"+self.diarios[i]+".pickle", 'rb') as handle:
+                self.b.append(self.decodearDocs(pickle.load(handle)))   
+        for diccionario in self.b:
+            for termid in diccionario:
+                self.temp[termid] = diccionario[termid]
+        self.index = self.generarIntArray_y_DicConTupla(self.mergearListaDeDiccionarios(self.temp, self.recuperarListaDeIndiceTermID()))[1]        
+        return self.index      
+
+    # RECUPERA DICICONARIO DOCID->DOC CON PICKLE
+    def recuperarListaDeIndiceDocID(self):
         with open("out/diccionario_docid-doc.pickle", 'rb') as handle:
             return pickle.load(handle)
 
-# RECUPERA DICICONARIO DOC->STRING CON PICKLE
-def recuperarListaDeIndiceDoc():
+    # RECUPERA DICICONARIO DOC->STRING CON PICKLE
+    def recuperarListaDeIndiceDoc(self):
         with open("out/diccionario_doc-terms.pickle", 'rb') as handle:
             return pickle.load(handle)            
 
-# RECUPERA DICICONARIO TERMID->TERM CON PICKLE
-def recuperarListaDeIndiceTermID():
+    # RECUPERA DICICONARIO TERMID->TERM CON PICKLE
+    def recuperarListaDeIndiceTermID(self):
         with open("out/diccionario_termid-term.pickle", 'rb') as handle:
             return pickle.load(handle)
-   
-
-# ARCHIVO MAIN
-def mainIndiceInvertido():
-    diccionario = {}
-    lista = []
-    diccionarioNuevoDocID = {}
-    diccionarioNuevoTermID = {}
-    diccionarioDocTerm = {}
-    newDict = {}
-    for i in range(0,len(diarios)):
-        print(diarios[i])
-        bloqueParseado = parsear_bloque(i)
-        for key in bloqueParseado:
-            diccionarioDocTerm[key] = bloqueParseado[key]
-        diccionarioDocID = construirDocID(bloqueParseado)
-        for key in diccionarioDocID:
-            diccionarioNuevoDocID[key]=diccionarioDocID[key]
-        diccionarioTermID = construirTermID(stemmear(diccionarioDocID))
-        for key in diccionarioTermID:
-            diccionarioNuevoTermID[key]=diccionarioTermID[key]
-        diccionarioTemporal=invertirDiccionario(diccionarioTermID, diccionarioDocID)
-        lista.append(diccionarioTemporal)
-        for key in diccionarioTemporal:
-            diccionario[key]=diccionarioTemporal[key]   
-        print(diccionarioTemporal)
-    newDict=dict(collections.OrderedDict(sorted(diccionario.items())))
-    guardarIndiceInvertido(lista) 
-    guardarListaDeIndiceDoc(diccionarioDocTerm)
-    guardarListaDeIndiceDocID(diccionarioNuevoDocID)
-    guardarListaDeIndiceTermID(diccionarioNuevoTermID)
-    return (newDict, lista)    
+    
+    # RECUPERA LISTA DE INTARRAY
+    def recuperarIntArray(self):
+        with open("out/intArray.pickle", 'rb') as handle:
+            return pickle.load(handle)
 
 
-# ENCODEA DICCIONARIO INVERTIDO
-def encodearDocs(dicInv):
-    dicNuevo={}
-    for key in dicInv:
-        byteArray = UncompressedPostings.encode(dicInv[key])
-        dicNuevo[key] = byteArray 
-    return dicNuevo  
+    # ARCHIVO MAIN
+    def mainIndiceInvertido(self):
+        self.diccionario = {}
+        self.lista = []
+        self.diccionarioNuevoDocID = {}
+        self.diccionarioNuevoTermID = {}
+        self.diccionarioDocTerm = {}
+        self.newDict = {}
+        self.temp = 0
+        self.intArray = []
+        self.finalDict= {}
+        # iteraciones sobre todos los bloques
+        for i in range(0,len(self.diarios)):
+            # SE PRINTEA PARA CHECKEAR QUE BLOQUE SE ESTA INVIRTIENDO
+            print(self.diarios[i])
+            self.bloqueParseado = self.parsear_bloque(i)
+            # ALMACENA TODOS LOS DOC->NOTICIA
+            for key in self.bloqueParseado:
+                self.diccionarioDocTerm[key] = self.bloqueParseado[key]
+            self.diccionarioDocID = self.construirDocID(self.bloqueParseado)
+            # ALMACENA TODOS LOS DOCID->NOTICIA
+            for key in self.diccionarioDocID:
+                self.diccionarioNuevoDocID[key]=self.diccionarioDocID[key]
+            self.diccionarioTermID =self.construirTermID(self.stemmear(self.diccionarioDocID))
+            # ALMACENA TODOS LOS TERMID->TERM
+            for key in self.diccionarioTermID:
+                self.diccionarioNuevoTermID[key]=self.diccionarioTermID[key]
+            self.diccionarioTemporal=self.invertirDiccionario(self.diccionarioTermID, self.diccionarioDocID)
+            # AGREGA DICCIONARIO TERMID->DOCID DE CADA BLOQUE A LA LISTA A FIN DE SER GUARDADOS TODOS JUNTOS EN CADA BLOQUE EN ESPECIFICO 
+            self.lista.append(self.diccionarioTemporal)
+            # AGREGA SE MERGEA CONSTANTEMENTE LOS DICCIONARIOS TERMID->DOCID DE TODOS LOS BLOQUES A UN DICCIONARIO GLOBAL
+            for key in self.diccionarioTemporal:
+                self.diccionario[key]=self.diccionarioTemporal[key]
+            # SE PRINTEA PARA CHECKEAR EL CORRECTO FUNCIONAMIENTO DEL DICCIONARIO TERMID->DOCID   
+            print(self.diccionarioTemporal)
+        # MERGEA EL DICCIONARIO TERMID->DOCID    
+        self.newDict=self.mergearListaDeDiccionarios(dict(collections.OrderedDict(sorted(self.diccionario.items()))),self.diccionarioNuevoTermID)
+        # LUEGO DE MERGEAR SE OBTIENE LA TUPLA CON EL INTARRAY Y EL DICCIONARIO TERMID->TUPLE
+        self.temp = self.generarIntArray_y_DicConTupla(self.newDict)
+        # SE ASIGNA EL INTARRAY
+        self.intArray = self.temp[0]
+        # SE ASIGNA EL DICCIONARIO TERMID->TUPLE FINAL
+        self.finalDict = self.temp[1]
+        # GUARDA INTARRAY PARA COMODIDAD POSTERIOR
+        self.guardarIntArray(self.intArray)
+        # GUARDA DICCIONARIO DOC->NOTICIA PARA COMODIDAD POSTERIOR
+        self.guardarListaDeIndiceDoc(self.diccionarioDocTerm)
+        # GUARDA DICCIONARIO DOCID->NOTICIA PARA COMODIDAD POSTERIOR
+        self.guardarListaDeIndiceDocID(self.diccionarioNuevoDocID)
+        # GUARDA DICCIONARIO TERMID->TERM PARA COMODIDAD POSTERIOR
+        self.guardarListaDeIndiceTermID(self.diccionarioNuevoTermID)
 
-# DECODEA DICCIONARIO ENCODEADO
-def decodearDocs(dicInvEncodeado):
-    dicNuevo={}
-    for key in dicInvEncodeado: 
-        value = UncompressedPostings.decode(dicInvEncodeado[key])
-        dicNuevo[key]=value
-    return dicNuevo    
+        return (self.finalDict, self.lista)    
 
-# COMPRIMIR EN BYTEARRAY UNA LISTA DE ENTEROS
-def generar_value_de_term_id(dicInv):
-    arrayTemp = []
-    for key in dicInv:
-        arrayTemp.append(key)
-    return arrayTemp    
 
-# METODO QUE CONVIERTE EL DICCIONARIO TERMID-DOCID
-def generarArrayIDyDicConTupla(dic):
+    # ENCODEA DICCIONARIO INVERTIDO
+    def encodearDocs(self,dicInv):
+        self.dicNuevo={}
+        for key in dicInv:
+            self.byteArray = UncompressedPostings.encode(dicInv[key])
+            self.dicNuevo[key] = self.byteArray 
+        return self.dicNuevo  
 
-        dicTemporal = {}
+    # DECODEA DICCIONARIO ENCODEADO
+    def decodearDocs(self,dicInvEncodeado):
+        self.dicNuevo={}
+        for key in dicInvEncodeado: 
+            self.value = UncompressedPostings.decode(dicInvEncodeado[key])
+            self.dicNuevo[key]=self.value
+        return self.dicNuevo    
 
-        dicIntArray = []
-        posicionInicial = 0
-        cantidadDeDocs=0
-        posicionActual = 0
+    # COMPRIMIR EN BYTEARRAY UNA LISTA DE ENTEROS
+    def generar_value_de_term_id(self,dicInv):
+        self.arrayTemp = []
+        for key in dicInv:
+            self.arrayTemp.append(key)
+        return self.arrayTemp    
 
-        for termId in dic.keys():
+    # METODO QUE CONVIERTE EL DICCIONARIO TERMID-DOCID
+    def generarIntArray_y_DicConTupla(self,dic):
 
-            dicIntArray.append(termId)
-            posicionActual = posicionActual +1
+            self.dicTemporal = {}
+            self.dicIntArray = []
+            self.posicionInicial = 0
+            self.cantidadDeDocs = 0
+            self.posicionActual = 0
 
-            for docId in dic.get(termId):
+            for termId in dic.keys():
 
-                dicIntArray.append(docId)
+                self.dicIntArray.append(termId)
+                self.posicionActual = self.posicionActual +1
 
-                cantidadDeDocs =cantidadDeDocs+1
-                posicionActual = posicionActual +1
+                for docId in dic.get(termId):
 
-            long_en_bytes = sys.getsizeof(cantidadDeDocs)
+                    self.dicIntArray.append(docId)
 
-            dicTemporal.setdefault(termId,(posicionInicial,cantidadDeDocs,long_en_bytes))  
+                    self.cantidadDeDocs = self.cantidadDeDocs + 1
+                    self.posicionActual = self.posicionActual + 1
 
-            posicionInicial = posicionActual
-            cantidadDeDocs=0
+                self.long_en_bytes = sys.getsizeof(self.cantidadDeDocs)
 
-        return (dicIntArray,dicTemporal)
+                self.dicTemporal.setdefault(termId,(self.posicionInicial,self.cantidadDeDocs,self.long_en_bytes))  
 
-# ENCONTRAR PALABRA
-def encontrarNoticiasdePalabra(palabras, diccionarioMergeado):
+                self.posicionInicial = self.posicionActual
+                self.cantidadDeDocs=0
 
-    palabrasSeparadas = palabras.split()
-    if not diccionarioMergeado:
-        print("No hay diccionario en memoria")
-    else:    
-        for palabra in palabrasSeparadas:
-            
-            listaDeNoticiasID = []
-            listaDeNoticias = []
-            listaDeDiccionarioDocID = recuperarListaDeIndiceDocID()
-            listaDeDiccionarioTermID = recuperarListaDeIndiceTermID()
-            listaDeDiccionarioDoc = recuperarListaDeIndiceDoc()
-            palabraStemmeada = stemmer.stem(palabra.lower())
-            for numeroTermID,termino in listaDeDiccionarioTermID.items():
-                if termino == palabraStemmeada:         
-                    if numeroTermID in diccionarioMergeado:
-                        listaDeNoticiasID.append(diccionarioMergeado[numeroTermID])
-            if len(listaDeNoticiasID) == 0:
-                print(colored("\n---------------------La palabra '"+palabra+"' no se encuentra en ninguna noticia---------------------", 'red'))
-            else:
-                print(colored("\n ---------------------  Las noticias relacionadas con '"+palabra+"' son:  ---------------------",'green'))
-            for arrayNoticiaID in listaDeNoticiasID:
-                for noticiaID in arrayNoticiaID:
-                    for numeroDocID,noticia in listaDeDiccionarioDocID.items():
-                        if noticiaID == numeroDocID:
-                            for doc in listaDeDiccionarioDoc:
-                                
-                                if listaDeDiccionarioDoc[doc] == noticia:
-                                    listaDeNoticias.append(doc)
-                                    print("\n",doc)
+            return (self.dicIntArray,self.dicTemporal)
 
-def obtener_docs_ids_con_tupla(tupla):
+    # ENCONTRAR PALABRA
+    def encontrarNoticiasdePalabra(self,palabras, diccionarioMergeado):
 
-    lista = []
+        self.palabrasSeparadas = palabras.split()
+        if not diccionarioMergeado:
+            print(colored("No hay diccionario en memoria", "red"))
+        else:    
+            for palabra in self.palabrasSeparadas:
+                
+                self.listaDeNoticiasID = []
+                self.listaDeNoticias = []
+                self.listaDeDiccionarioDocID = self.recuperarListaDeIndiceDocID()
+                self.listaDeDiccionarioTermID = self.recuperarListaDeIndiceTermID()
+                self.listaDeDiccionarioDoc = self.recuperarListaDeIndiceDoc()
+                self.palabraStemmeada = self.stemmer.stem(palabra.lower())
+                for numeroTermID,termino in self.listaDeDiccionarioTermID.items():
+                    if termino == self.palabraStemmeada:         
+                        if numeroTermID in diccionarioMergeado:
+                            self.listaDeNoticiasID.append(self.obtenerDocsIdsConTupla(diccionarioMergeado[numeroTermID]))
+                if len(self.listaDeNoticiasID) == 0:
+                    print(colored("\n---------------------La palabra '"+palabra+"' no se encuentra en ninguna noticia---------------------", 'red'))
+                else:
+                    print(colored("\n ---------------------  Las noticias relacionadas con '"+palabra+"' son:  ---------------------",'green'))
+                for arrayNoticiaID in self.listaDeNoticiasID:
+                    for noticiaID in arrayNoticiaID:
+                        for numeroDocID,noticia in self.listaDeDiccionarioDocID.items():
+                            if noticiaID == numeroDocID:
+                                for doc in self.listaDeDiccionarioDoc:
+                                    
+                                    if self.listaDeDiccionarioDoc[doc] == noticia:
+                                        self.listaDeNoticias.append(doc)
+                                        print("\n",doc)
 
-    for x in range(1,tupla[1]+1):
-        lista.append(int_array[tupla[0]+x])
+    def pasarDicDeTuplaADocID(self, termIDtuple):
+        self.dicTemp = {}
+        for key in termIDtuple:
+            self.dicTemp[key] = self.obtenerDocsIdsConTupla(termIDtuple[key])        
 
-     return lista
+    def obtenerDocsIdsConTupla(self,tupla):
+
+        self.lista = []
+        self.intArray = self.recuperarIntArray()
+
+        for x in range(1,tupla[1]+1):
+            self.lista.append(self.intArray[tupla[0]+x])
+
+        return(self.lista)
