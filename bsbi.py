@@ -7,10 +7,10 @@ import nltk
 import re
 import pickle
 import collections
-from UncompressedPostings import UncompressedPostings
 import array
 import sys
 from termcolor import colored
+from encodedecode import EncodeDecode
 
 
 
@@ -26,6 +26,7 @@ class FuncionesBSBI:
         self.descripcion = []
         self.ultimoDocID = 0
         self.ultimoTermID = 0
+        self.encodedecode = EncodeDecode()
 
     # GENERA DICCIONARIO DOCID->DOC A PARTIR DE DICCIONARIO DE DOC->STRING(TERMINOS)
     def construirDocID(self,diccionarioDeDocs):
@@ -149,7 +150,7 @@ class FuncionesBSBI:
     def guardarIndiceInvertido(self,diccionarioAGuardar):
         for i in range(0,len(self.diarios)):
             with open("out/"+self.diarios[i]+"/"+"diccionario_"+self.diarios[i]+".pickle","wb") as handle:
-                pickle.dump(self.encodearDocs(diccionarioAGuardar[i]), handle, protocol=pickle.HIGHEST_PROTOCOL)        
+                pickle.dump(self.encodedecode.encodearDocs(diccionarioAGuardar[i]), handle, protocol=pickle.HIGHEST_PROTOCOL)        
 
     # GUARDA DICCIONARIOS DOC->STRING CON PICKLE
     def guardarListaDeIndiceDoc(self,listaDeIndiceDocID):
@@ -168,7 +169,7 @@ class FuncionesBSBI:
         self.index = {}
         for i in range(0, len(self.diarios)):
             with open("out/"+self.diarios[i]+"/"+"diccionario_"+self.diarios[i]+".pickle", 'rb') as handle:
-                self.b.append(self.decodearDocs(pickle.load(handle)))   
+                self.b.append(self.encodedecode.decodearDocs(pickle.load(handle)))   
         for diccionario in self.b:
             for termid in diccionario:
                 self.temp[termid] = diccionario[termid]
@@ -249,30 +250,6 @@ class FuncionesBSBI:
         self.guardarListaDeIndiceTermID(self.diccionarioNuevoTermID)
 
         return (self.finalDict, self.lista)    
-
-
-    # ENCODEA DICCIONARIO INVERTIDO
-    def encodearDocs(self,dicInv):
-        self.dicNuevo={}
-        for key in dicInv:
-            self.byteArray = UncompressedPostings.encode(dicInv[key])
-            self.dicNuevo[key] = self.byteArray 
-        return self.dicNuevo  
-
-    # DECODEA DICCIONARIO ENCODEADO
-    def decodearDocs(self,dicInvEncodeado):
-        self.dicNuevo={}
-        for key in dicInvEncodeado: 
-            self.value = UncompressedPostings.decode(dicInvEncodeado[key])
-            self.dicNuevo[key]=self.value
-        return self.dicNuevo    
-
-    # COMPRIMIR EN BYTEARRAY UNA LISTA DE ENTEROS
-    def generar_value_de_term_id(self,dicInv):
-        self.arrayTemp = []
-        for key in dicInv:
-            self.arrayTemp.append(key)
-        return self.arrayTemp    
 
     # METODO QUE CONVIERTE EL DICCIONARIO TERMID-DOCID
     def generarIntArray_y_DicConTupla(self,dic):
