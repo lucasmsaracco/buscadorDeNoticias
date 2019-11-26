@@ -1,38 +1,36 @@
-from UncompressedPostings import UncompressedPostings
+from __future__ import division 
+from struct import pack, unpack
+class Compresor:
+    def encodearNumero(self,num):
+        """Variable byte code encode number.
+        Usage:
+        import vbcode
+        vbcode.encode_number(128)
+        """
+        self.byteArray = []
+        while True:
+            self.byteArray.insert(0, num % 128)
+            if num < 128:
+                break
+            num = num // 128
+        self.byteArray[-1] += 128
+        return pack('%dB' % len(self.byteArray), *self.byteArray)
 
-class Compresion():
-    
-    @staticmethod
-    def comprimir(intArray, dicInvertido):
-        byteArray = UncompressedPostings.encode(intArray)
-        i = 0
-        while i < len(intArray):
+    def encodear(self,nums):
+        byteArray = []
+        for num in nums:
+            byteArray.append(self.encodearNumero(num))
+        return b"".join(byteArray)
 
-            termID = intArray[i]
-            documentos = dicInvertido[termID][1]
-            byteArray.append(termID)
-            byteArray.append(intArray[i + 1])
-
-            if documentos > 1:
-
-                for j in range(0, documentos - 1):
-
-                    n = abs(intArray[i + j + 1] - intArray[i + j + 1 + 1])
-
-                    if n < 128:
-                        n = Compresion.setBit(n, 7)
-                    elif n < 32768:
-                        n = Compresion.setBit(n, 15)
-                    else:
-                        n = Compresion.setBit(n, 31)
-
-                    byteArray.append(n)
-
-            i = i + documentos + 1
-
-        return byteArray
-
-    @staticmethod
-    def setBit(int_type, offset):
-        mask = 1 << offset
-        return(int_type | mask)
+    def decodear(self,byteArray):
+        self.n = 0
+        self.nums = []
+        byteArray = unpack('%dB' % len(byteArray), byteArray)
+        for byte in byteArray:
+            if byte < 128:
+                self.n = 128 * self.n + byte
+            else:
+                self.n = 128 * self.n + (byte - 128)
+                self.nums.append(self.n)
+                self.n = 0
+        return self.nums

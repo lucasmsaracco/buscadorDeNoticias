@@ -3,14 +3,18 @@ import os
 from recolector import Recolector
 from bsbi import FuncionesBSBI
 from termcolor import colored
+from compresor import Compresor
 
 class Menu:
 
     def __init__(self):
         self.recolector = Recolector()
         self.bsbi = FuncionesBSBI()
+        self.compresor = Compresor()
         self.ans=True
         self.index = {}
+        self.compressedIndex = {}
+        self.tempIndex = {}
         self.lista = []
 
     
@@ -23,7 +27,8 @@ class Menu:
             2.Crear indice invertido
             3.Mostar el indice invertido en memoria
             4.Realizar busquedas
-            5.Salir del programa
+            5.Comprimir el indice
+            6.Salir del programa
             """)
 
             print(colored("Ingrese la opcion deseada:", "blue"))
@@ -94,6 +99,7 @@ class Menu:
                                 self.index = self.bsbi.recuperarIndice()
                                 self.index2 = self.bsbi.recuperarListaDeIndiceDocID()
                                 self.index3 = self.bsbi.recuperarListaDeIndiceTermID()
+                                self.compressedIndex = {}
                                 print(colored("Indice cargado, aprete ENTER para avanzar", "green"))
                             except:
                                 print(colored("No se pudo encontrar alguno de los indices, aprete ENTER para volver atras", "red"))  
@@ -117,7 +123,13 @@ class Menu:
                     os.system('cls')
                     self.palabra = input(colored("Ingrese una palabra:", "blue"))
                     os.system("cls")
-                    self.bsbi.encontrarNoticiasdePalabra(self.palabra, self.index)   
+                    if len(self.compressedIndex.keys()) == 0:
+                        self.bsbi.encontrarNoticiasdePalabra(self.palabra, self.index)
+                    else:
+                        for key in self.compressedIndex:
+                            self.tempIndex[key] = self.compresor.decodear(self.compressedIndex[key])
+                        self.bsbi.encontrarNoticiasdePalabra(self.palabra, self.tempIndex)
+                        self.tempIndex = {}       
                     print("\nAprete enter para salir")
                     self.key2=None
                     while self.key2 != b"\r":
@@ -129,13 +141,30 @@ class Menu:
                 if len(self.index) == 0:
                     print(colored("No se encuentra ningun diccionario en memoria, aprete ENTER para volver", "red"))
                 else:
-                    print(self.index, colored("\nAprete ENTER para volver", "green"))
+                    if len(self.compressedIndex.keys()) == 0:
+                        print(self.bsbi.generarIntArray_y_DicConTupla(self.index)[1], colored("\nAprete ENTER para volver", "green"))
+                    else:
+                        print(self.compressedIndex)    
                 self.key = None
                 while self.key != b'\r':
                     self.key = msvcrt.getch()
                 if self.key == b'\r':
                     pass          
             elif self.ans == b"5":
-                self.ans == False
+                os.system("cls")
+                if len(self.index) == 0:
+                    print(colored("No se encuentra ningun diccionario en memoria, aprete ENTER para volver", "red"))
+                else:
+                    for key in self.index:
+                        self.compressedIndex[key] = self.compresor.encodear(self.index[key])
+                    self.index = {}   
+                    print(colored("\nAprete ENTER para volver", "green"))
+                self.key = None
+                while self.key != b'\r':
+                    self.key = msvcrt.getch()
+                if self.key == b'\r':
+                    pass 
+            elif self.ans == b"6":
+                self.ans == False    
 x = Menu()
 x.ejecutarMenu()

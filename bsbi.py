@@ -173,7 +173,7 @@ class FuncionesBSBI:
         for diccionario in self.b:
             for termid in diccionario:
                 self.temp[termid] = diccionario[termid]
-        self.index = self.generarIntArray_y_DicConTupla(self.mergearListaDeDiccionarios(self.temp, self.recuperarListaDeIndiceTermID()))[1]        
+        self.index = self.mergearListaDeDiccionarios(self.temp, self.recuperarListaDeIndiceTermID())
         return self.index      
 
     # RECUPERA DICICONARIO DOCID->DOC CON PICKLE
@@ -299,7 +299,7 @@ class FuncionesBSBI:
                 for numeroTermID,termino in self.listaDeDiccionarioTermID.items():
                     if termino == self.palabraStemmeada:         
                         if numeroTermID in diccionarioMergeado:
-                            self.listaDeNoticiasID.append(self.obtenerDocsIdsConTupla(diccionarioMergeado[numeroTermID]))
+                            self.listaDeNoticiasID.append(diccionarioMergeado[numeroTermID])
                 if len(self.listaDeNoticiasID) == 0:
                     print(colored("\n---------------------La palabra '"+palabra+"' no se encuentra en ninguna noticia---------------------", 'red'))
                 else:
@@ -315,9 +315,10 @@ class FuncionesBSBI:
                                         print("\n",doc)
 
     def pasarDicDeTuplaADocID(self, termIDtuple):
-        self.dicTemp = {}
+        self.dicTempo = {}
         for key in termIDtuple:
-            self.dicTemp[key] = self.obtenerDocsIdsConTupla(termIDtuple[key])        
+            self.dicTempo[key] = self.obtenerDocsIdsConTupla(termIDtuple[key])
+        return self.dicTempo            
 
     def obtenerDocsIdsConTupla(self,tupla):
 
@@ -328,3 +329,4 @@ class FuncionesBSBI:
             self.lista.append(self.intArray[tupla[0]+x])
 
         return(self.lista)
+
