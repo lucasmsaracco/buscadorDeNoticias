@@ -11,6 +11,7 @@ import array
 import sys
 from termcolor import colored
 from encodedecode import EncodeDecode
+import crear_binarios
 
 
 
@@ -104,7 +105,8 @@ class FuncionesBSBI:
                     if numeroPalabra not in self.dicInv.keys():
                         self.dicInv[numeroPalabra]=[key]
                     else:
-                        self.dicInv[numeroPalabra].append(key)
+                        if key not in self.dicInv[numeroPalabra]:             
+                            self.dicInv[numeroPalabra].append(key)
         return(self.dicInv)
 
     #MERGEA DICICONARIO TERMID->DOCID
@@ -173,7 +175,7 @@ class FuncionesBSBI:
         for diccionario in self.b:
             for termid in diccionario:
                 self.temp[termid] = diccionario[termid]
-        self.index = self.mergearListaDeDiccionarios(self.temp, self.recuperarListaDeIndiceTermID())
+        self.index = self.generarIntArray_y_DicConTupla(self.mergearListaDeDiccionarios(self.temp, self.recuperarListaDeIndiceTermID()))[1]        
         return self.index      
 
     # RECUPERA DICICONARIO DOCID->DOC CON PICKLE
@@ -248,10 +250,10 @@ class FuncionesBSBI:
         self.guardarListaDeIndiceDocID(self.diccionarioNuevoDocID)
         # GUARDA DICCIONARIO TERMID->TERM PARA COMODIDAD POSTERIOR
         self.guardarListaDeIndiceTermID(self.diccionarioNuevoTermID)
-
+        self.guardarIndiceInvertido(self.lista)
         return (self.finalDict, self.lista)    
 
-    # METODO QUE CONVIERTE EL DICCIONARIO TERMID-DOCID
+# METODO QUE CONVIERTE EL DICCIONARIO TERMID-DOCID
     def generarIntArray_y_DicConTupla(self,dic):
 
             self.dicTemporal = {}
@@ -261,9 +263,6 @@ class FuncionesBSBI:
             self.posicionActual = 0
 
             for termId in dic.keys():
-
-                self.dicIntArray.append(termId)
-                self.posicionActual = self.posicionActual +1
 
                 for docId in dic.get(termId):
 
@@ -282,24 +281,25 @@ class FuncionesBSBI:
             return (self.dicIntArray,self.dicTemporal)
 
     # ENCONTRAR PALABRA
-    def encontrarNoticiasdePalabra(self,palabras, diccionarioMergeado):
+    def encontrarNoticiasdePalabra(self,palabras, diccionarioMergeado, intArray):
 
         self.palabrasSeparadas = palabras.split()
         if not diccionarioMergeado:
             print(colored("No hay diccionario en memoria", "red"))
         else:    
             for palabra in self.palabrasSeparadas:
-                
                 self.listaDeNoticiasID = []
                 self.listaDeNoticias = []
                 self.listaDeDiccionarioDocID = self.recuperarListaDeIndiceDocID()
                 self.listaDeDiccionarioTermID = self.recuperarListaDeIndiceTermID()
                 self.listaDeDiccionarioDoc = self.recuperarListaDeIndiceDoc()
                 self.palabraStemmeada = self.stemmer.stem(palabra.lower())
+                self.intArrayTemp = intArray 
                 for numeroTermID,termino in self.listaDeDiccionarioTermID.items():
                     if termino == self.palabraStemmeada:         
                         if numeroTermID in diccionarioMergeado:
-                            self.listaDeNoticiasID.append(diccionarioMergeado[numeroTermID])
+                                self.listaDeNoticiasID.append(self.obtenerDocsIdsConTupla(diccionarioMergeado[numeroTermID],self.intArrayTemp))
+
                 if len(self.listaDeNoticiasID) == 0:
                     print(colored("\n---------------------La palabra '"+palabra+"' no se encuentra en ninguna noticia---------------------", 'red'))
                 else:
@@ -314,19 +314,92 @@ class FuncionesBSBI:
                                         self.listaDeNoticias.append(doc)
                                         print("\n",doc)
 
-    def pasarDicDeTuplaADocID(self, termIDtuple):
-        self.dicTempo = {}
-        for key in termIDtuple:
-            self.dicTempo[key] = self.obtenerDocsIdsConTupla(termIDtuple[key])
-        return self.dicTempo            
+    # ENCONTRAR PALABRA
+    def encontrarNoticiasdePalabraComprimida(self,palabras, diccionarioMergeado, lista):
 
-    def obtenerDocsIdsConTupla(self,tupla):
+        self.palabrasSeparadas = palabras.split()
+        if not diccionarioMergeado:
+            print(colored("No hay diccionario en memoria", "red"))
+        else:    
+            for palabra in self.palabrasSeparadas:
+                self.listaDeNoticiasID = []
+                self.listaDeNoticias = []
+                self.listaDeDiccionarioDocID = self.recuperarListaDeIndiceDocID()
+                self.listaDeDiccionarioTermID = self.recuperarListaDeIndiceTermID()
+                self.listaDeDiccionarioDoc = self.recuperarListaDeIndiceDoc()
+                self.palabraStemmeada = self.stemmer.stem(palabra.lower())
+                for numeroTermID,termino in self.listaDeDiccionarioTermID.items():
+                    if termino == self.palabraStemmeada:         
+                        if numeroTermID in diccionarioMergeado:
+                                self.listaDeNoticiasID.append(crear_binarios.Bit_array().obtener_doc_ids(lista, diccionarioMergeado[numeroTermID]))
 
+                if len(self.listaDeNoticiasID) == 0:
+                    print(colored("\n---------------------La palabra '"+palabra+"' no se encuentra en ninguna noticia---------------------", 'red'))
+                else:
+                    print(colored("\n ---------------------  Las noticias relacionadas con '"+palabra+"' son:  ---------------------",'green'))
+                for arrayNoticiaID in self.listaDeNoticiasID:
+                    for noticiaID in arrayNoticiaID:
+                        for numeroDocID,noticia in self.listaDeDiccionarioDocID.items():
+                            if noticiaID == numeroDocID:
+                                for doc in self.listaDeDiccionarioDoc:
+                                    
+                                    if self.listaDeDiccionarioDoc[doc] == noticia:
+                                        self.listaDeNoticias.append(doc)
+                                        print("\n",doc)
+   
+
+    def obtenerDocsIdsConTupla(self,tupla, intArray):
+        
         self.lista = []
-        self.intArray = self.recuperarIntArray()
-
-        for x in range(1,tupla[1]+1):
-            self.lista.append(self.intArray[tupla[0]+x])
-
+        
+        for x in range(tupla[1]):
+            self.lista.append(intArray[tupla[0]+x])    
+      
         return(self.lista)
 
+    def comprimir_int_array(self, int_array, index):
+
+        self.new_array = []
+
+        for term_id in index.keys():
+
+            self.doc_ids = self.obtenerDocsIdsConTupla(index.get(term_id), int_array) 
+            
+            self.new_array.append(self.doc_ids[0])
+            if(len(self.doc_ids) >1):
+
+
+                for num in range(0,len(self.doc_ids)-1):
+                    
+                    self.new_array.append(self.doc_ids[num+1]-self.doc_ids[num])
+            
+        
+        return self.new_array
+
+    def descomprimir_int_array(self,int_array,index):
+
+        self.temp_lista = []
+
+        for term_id in index.keys():
+
+            self.doc_ids = self.descomprimir_lista_de_doc_ids(self.obtenerDocsIdsConTupla(index.get(term_id), int_array))
+
+            for doc_id in self.doc_ids:
+                self.temp_lista.append(doc_id)
+
+        return self.temp_lista
+
+    def descomprimir_lista_de_doc_ids(self,lista):
+    
+        self.temp = []
+
+        self.temp.append(lista[0])
+        
+        for num in range(len(lista)-1):
+
+           
+
+            self.temp.append(lista[num+1]+self.temp[num])
+
+
+        return self.temp
